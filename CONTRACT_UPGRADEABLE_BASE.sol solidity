@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+// 可升级合约基础模板，使用代理模式，无需重新部署
+contract CONTRACT_UPGRADEABLE_BASE {
+    address public implementation;
+    address public immutable owner;
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    // 升级合约逻辑
+    function upgradeContract(address newImpl) external onlyOwner {
+        implementation = newImpl;
+    }
+
+    // 调用逻辑合约
+    fallback() external payable {
+        address _impl = implementation;
+        assembly {
+            calldatacopy(0, 0, calldatasize())
+            let result := delegatecall(gas(), _impl, 0, calldatasize(), 0, 0)
+            returndatacopy(0, 0, returndatasize())
+            switch result
+            case 0 { revert(0, returndatasize()) }
+            default { return(0, returndatasize()) }
+        }
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not owner");
+        _;
+    }
+}
